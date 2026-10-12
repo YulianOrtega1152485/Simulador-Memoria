@@ -828,3 +828,155 @@ h1, h2, h3, .logo, .bin-input {
 .gdt-row span {
     text-align: center;
 }
+
+/* Paneles "¿Cómo funciona?" y Glosario */
+.howto {
+    background: var(--surface-color);
+    border: 1px solid var(--surface-light);
+    border-radius: 12px;
+    margin: 0 auto 2rem;
+    max-width: 1100px;
+    overflow: hidden;
+}
+
+.howto > summary {
+    cursor: pointer;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    list-style: none;
+    user-select: none;
+}
+
+.howto > summary::-webkit-details-marker {
+    display: none;
+}
+
+.howto > summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 0.6rem;
+    transition: var(--transition);
+}
+
+.howto[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.howto-body {
+    padding: 0 1.5rem 1.5rem;
+    color: var(--text-main);
+    line-height: 1.7;
+    font-size: 0.92rem;
+}
+
+.howto-body ol,
+.howto-body ul {
+    margin: 0.75rem 0 0.75rem 1.25rem;
+}
+
+.howto-body li {
+    margin-bottom: 0.35rem;
+}
+
+.howto-body code {
+    background: var(--bg-color);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent-color);
+}
+
+.howto-example {
+    margin-top: 1rem;
+    background: var(--bg-color);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent-color);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.bit-map {
+    margin-top: 1rem;
+}
+
+.bit-map-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--success-color);
+    margin-bottom: 0.5rem;
+}
+
+.bit-map-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.bit-map-table th,
+.bit-map-table td {
+    border: 1px solid var(--surface-light);
+    padding: 0.5rem 0.7rem;
+    text-align: center;
+}
+
+.bit-map-table th {
+    background: var(--surface-light);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Glosario */
+.glossary-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.glossary-col h5 {
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Derechos de acceso / capacidades */
+.derechos-summary {
+    margin-top: 0.8rem;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.caps-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+}
+
+.cap-badge {
+    display: inline-block;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(63, 185, 80, 0.15);
+    border: 1px solid var(--success-color);
+    color: var(--success-color);
+}
+
+.bit-legend {
+    margin-top: 1rem;
+    margin-left: 1.1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.3rem 1.5rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.bit-legend li {
+    line-height: 1.5;
+}

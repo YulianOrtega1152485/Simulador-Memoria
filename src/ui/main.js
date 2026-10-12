@@ -24,9 +24,73 @@ window.router = {
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Glosario de bits (derechos de acceso y bits especiales) — compartido por Protegido y Reversing.
+ */
+const BIT_GLOSSARY = `
+    <div class="glossary-cols">
+        <div class="glossary-col">
+            <h5>Bits especiales (Flags)</h5>
+            <ul>
+                <li><strong>G = 1</strong> amplía el límite a páginas de 4 KB (equivale a agregar 000) hasta 4 GB. <strong>G = 0</strong> el límite va de 00000H a FFFFFH (en bytes).</li>
+                <li><strong>AV = 0</strong> el segmento no está disponible. <strong>AV = 1</strong> sí está disponible.</li>
+                <li><strong>D = 0</strong> las instrucciones operan en 16 bits. <strong>D = 1</strong> operan en 32 bits.</li>
+            </ul>
+        </div>
+        <div class="glossary-col">
+            <h5>Byte de Derechos de Acceso &nbsp;(7→0: P · DPL · S · E · ED/C · R/W · A)</h5>
+            <ul>
+                <li><strong>P</strong>: 1 = base y límite válidos (presente); 0 = descriptor sin definir.</li>
+                <li><strong>DPL</strong>: nivel de privilegio del descriptor (00 mayor … 11 menor).</li>
+                <li><strong>S</strong>: 1 = descriptor de aplicación/local; 0 = de sistema/global.</li>
+                <li><strong>E</strong>: 1 = segmento de Código; 0 = segmento de Datos/Pila.</li>
+                <li><strong>ED/C</strong>: si es Datos, ED=0 expande hacia arriba / ED=1 hacia abajo; si es Código, C=0 ignora el nivel de privilegio / C=1 lo honra.</li>
+                <li><strong>R/W</strong>: si es Código, R=1 el código puede leerse; si es Datos, W=1 los datos pueden escribirse.</li>
+                <li><strong>A</strong>: 1 = el segmento ya ha sido utilizado; 0 = no ha sido utilizado.</li>
+            </ul>
+        </div>
+    </div>
+`;
+
+/**
+ * Genera la tarjeta que describe los derechos de acceso y qué se puede hacer en el segmento.
+ * @param {Object} decoded - Salida de ReversingEngine.parseDescriptor(...).decoded
+ * @returns {string} HTML
+ */
+const renderDerechos = (decoded) => {
+    const caps = decoded.capacidades
+        .map(c => `<span class="cap-badge">${c}</span>`)
+        .join('');
+    return `
+        <div class="rev-card rev-card-wide">
+            <h4>Derechos de Acceso · ¿Qué se puede hacer en este segmento?</h4>
+            <p class="derechos-summary">${decoded.resumen}</p>
+            <div class="caps-row">${caps}</div>
+            <ul class="bit-legend">
+                <li>${decoded.p.text}</li>
+                <li>${decoded.g.text}</li>
+                <li>${decoded.d.text}</li>
+                <li>${decoded.av.text}</li>
+                <li>${decoded.s.text}</li>
+                <li>${decoded.dpl.text}</li>
+                <li>${decoded.edcText}</li>
+                <li>${decoded.rwText}</li>
+                <li>${decoded.a.text}</li>
+            </ul>
+        </div>
+    `;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // Set initial active nav
     router.navigate('home');
+
+    // Glosario de bits compartido
+    const protGlossary = document.getElementById('prot-glossary');
+    const revGlossary = document.getElementById('rev-glossary');
+    if (protGlossary) protGlossary.innerHTML = BIT_GLOSSARY;
+    if (revGlossary) revGlossary.innerHTML = BIT_GLOSSARY;
+
     // Navigation Setup
     document.getElementById('btn-nav-home')?.addEventListener('click', () => router.navigate('home'));
     document.getElementById('btn-nav-real')?.addEventListener('click', () => router.navigate('real'));
@@ -151,18 +215,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const descBin = Conversions.hexToBin(descClean);
             const parsed = ReversingEngine.parseDescriptor(descBin);
 
+            const dec = parsed.decoded;
             const base = parsed.base.hex;
             const limitDec = parsed.limit.decimal;
-            const granular = parsed.details.flags[0] === '1';
-
             const accessBin = parsed.details.access;
-            const present = accessBin[0] === '1';
-            const dpl = parseInt(accessBin.slice(1, 3), 2);
-            const sBit = accessBin[3] === '1';
-            const typeBits = accessBin.slice(4, 8);
-            const isCode = typeBits[0] === '1';
-            const writable = typeBits[1] === '1';
-            const typeName = !sBit ? 'Sistema' : (isCode ? 'Código' : 'Datos');
+            const granular = dec.g.value;
+            const present = dec.p.value;
+            const dpl = dec.dpl.value;
+            const sBit = dec.s.value;
+            const isCode = dec.isCode;
+            const writable = dec.rw;
+            const typeName = dec.kind;
 
             let segError = null;
             if (!sBit) {
@@ -205,6 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
             resultProt.classList.remove('hidden');
             resultProt.className = res.isValid ? 'result-card' : 'result-card error';
 
+            const capsHtml = dec.capacidades.map(c => `<span class="cap-badge">${c}</span>`).join('');
+
             resultProt.innerHTML = `
                 <div class="result-item"><span class="result-label">Registro:</span><span class="result-value">${segType} (${typeName})</span></div>
                 <div class="result-item"><span class="result-label">Descriptor:</span><span class="result-value">0x${descClean}</span></div>
@@ -217,6 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="result-item"><span class="result-label">Offset:</span><span class="result-value">${res.offset}</span></div>
                 <div class="result-item" style="border-top: 2px solid ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}"><span class="result-label">Dirección Lineal:</span><span class="result-value" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.physicalAddressHex : 'ERROR'}</span></div>
                 <div class="formula-box" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.formula : res.error}</div>
+                <div class="result-item" style="display:block; border-bottom:none; margin-top:0.8rem"><span class="result-label">¿Qué se puede hacer?</span><div class="caps-row">${capsHtml}</div></div>
+                <p class="derechos-summary">${dec.resumen}</p>
             `;
         } catch (e) { alert('Error: ' + e.message); }
     });
@@ -310,7 +377,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="rev-card"><h4>Base (32 bits)</h4><div class="result-value" style="font-size:1.5rem; color:var(--accent-color)">${res.base.hex}</div><p style="font-size:0.75rem; color:var(--text-muted)">${res.base.binary}</p><p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.5rem">= B31-B24 + B23-B16 + B15-B0</p></div>
                     <div class="rev-card"><h4>Límite (20 bits)</h4><div class="result-value" style="font-size:1.5rem; color:var(--success-color)">${res.limit.hex}</div><p style="font-size:0.75rem; color:var(--text-muted)">${res.limit.binary}</p><p style="font-size:0.7rem; color:var(--text-muted); margin-top:0.5rem">= L19-L16 + L15-L0</p></div>
-                    <div class="rev-card"><h4>Atributos</h4><p>Granularidad (G): <strong>${res.details.granular}</strong></p><p>Tamaño (D/B): <strong>${res.details.size}</strong></p><p>Flags (bits 8-11): <span class="result-value">${res.details.flags}</span></p><p>Accesos (bits 16-23): <span class="result-value">${res.details.access}</span></p></div>
+                    <div class="rev-card"><h4>Atributos</h4><p>Tipo: <strong>${res.decoded.kind}</strong></p><p>Granularidad (G): <strong>${res.details.granular}</strong></p><p>Tamaño (D/B): <strong>${res.details.size}</strong></p><p>Flags (bits 8-11): <span class="result-value">${res.details.flags}</span></p><p>Accesos (bits 16-23): <span class="result-value">${res.details.access}</span></p></div>
+                    ${renderDerechos(res.decoded)}
                 `;
             } catch (err) { resultRev.classList.add('hidden'); }
         } else { resultRev.classList.add('hidden'); }

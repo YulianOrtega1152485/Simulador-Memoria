@@ -54,6 +54,18 @@
                     <h2>Modo Real (Real Mode)</h2>
                     <p>Dirección Física = (Segmento x 16) + Offset</p>
                 </div>
+                <details class="howto">
+                    <summary>¿Cómo funciona? (paso a paso)</summary>
+                    <div class="howto-body">
+                        <p><strong>Fórmula:</strong> Dirección Física = (Segmento × 16) + Offset</p>
+                        <ol>
+                            <li>El <strong>segmento</strong> (16 bits) se desplaza 4 bits a la izquierda (×16): en hexadecimal se le agrega un <code>0</code> al final.</li>
+                            <li>Se suma el <strong>offset</strong> (desplazamiento dentro de la ventana de 64 KB).</li>
+                            <li>El resultado es una dirección de <strong>20 bits</strong> (1 MB: 0x00000–0xFFFFF). El 5.º dígito hex marca dónde está la ventana en la memoria física.</li>
+                        </ol>
+                        <p class="howto-example">Ejemplo: 0x1234 : 0x00AB → 0x12340 + 0x00AB = <strong>0x123EB</strong></p>
+                    </div>
+                </details>
                 <div class="real-dashboard">
                     <div class="real-top-row">
                         <div class="input-group">
@@ -118,6 +130,37 @@
                     <h2>Modo Protegido (Protected Mode)</h2>
                     <p>Dirección Lineal = Base (del descriptor) + Offset</p>
                 </div>
+                <details class="howto">
+                    <summary>¿Cómo funciona? (paso a paso)</summary>
+                    <div class="howto-body">
+                        <p>En modo protegido el programa <strong>no da una dirección</strong>: da un <strong>selector</strong> + un <strong>offset</strong>. El hardware busca el <strong>descriptor</strong>, valida y recién ahí compone la dirección.</p>
+                        <ol>
+                            <li>Se descompone el <strong>selector</strong> en Índice / TI / RPL.</li>
+                            <li>Con el Índice se lee el <strong>descriptor</strong> en la GDT.</li>
+                            <li>Del descriptor se reconstruyen <strong>Base</strong> y <strong>Límite</strong> (y se leen P, DPL, S, Type, G…).</li>
+                            <li>Se valida: presente (P), tipo coherente con DS/CS/SS, y <code>Offset ≤ Límite</code>.</li>
+                            <li>Se calcula <strong>Dirección Lineal = Base + Offset</strong>.</li>
+                        </ol>
+                        <div class="bit-map">
+                            <div class="bit-map-title">Selector (16 bits)</div>
+                            <table class="bit-map-table">
+                                <tr><th>bits 15–3</th><th>bit 2</th><th>bits 1–0</th></tr>
+                                <tr><td>Índice (qué fila de la GDT)</td><td>TI (0=GDT, 1=LDT)</td><td>RPL (privilegio)</td></tr>
+                            </table>
+                        </div>
+                        <div class="bit-map">
+                            <div class="bit-map-title">Descriptor de 64 bits — secciones</div>
+                            <table class="bit-map-table">
+                                <tr><th>bits</th><th>campo</th><th>bits</th><th>campo</th></tr>
+                                <tr><td>63–56</td><td>Base 31:24</td><td>39–32</td><td>Base 23:16</td></tr>
+                                <tr><td>55–52</td><td>Flags: G, D/B, L, AV</td><td>31–16</td><td>Base 15:0</td></tr>
+                                <tr><td>51–48</td><td>Límite 19:16</td><td>15–0</td><td>Límite 15:0</td></tr>
+                                <tr><td>47–40</td><td>Access: P, DPL, S, Type</td><td colspan="2">Base = [63–56]+[39–32]+[31–16] · Límite = [51–48]+[15–0]</td></tr>
+                            </table>
+                        </div>
+                        <p class="howto-example">Ejemplo: selector 0x08 (índice=1, GDT) + descriptor 0x00CF9A000000FFFF + offset 0x1000 → Base 0x0 + 0x1000 = <strong>0x1000</strong></p>
+                    </div>
+                </details>
                 <div class="prot-dashboard">
                     <div class="prot-top-row">
                         <div class="input-group">
@@ -183,6 +226,10 @@
                         </div>
                     </div>
                 </div>
+                <details class="howto">
+                    <summary>Glosario de bits (derechos de acceso y bits especiales)</summary>
+                    <div class="howto-body" id="prot-glossary"></div>
+                </details>
             </section>
 
             <section id="screen-reversing" class="screen">
@@ -190,6 +237,18 @@
                     <h2>Laboratorio de Reversing</h2>
                     <p>Análisis de Descriptor de Segmento (64 bits)</p>
                 </div>
+                <details class="howto">
+                    <summary>¿Cómo funciona? (paso a paso)</summary>
+                    <div class="howto-body">
+                        <p>Ingresa el descriptor completo en <strong>64 bits binarios</strong>. La aplicación valida el ingreso (solo 0s y 1s, exactamente 64 bits), lo divide por colores según el esquema del 80386 y reconstruye <strong>Base</strong>, <strong>Límite</strong> y todos sus <strong>atributos</strong>.</p>
+                        <ol>
+                            <li>Base (32 bits) = Base[31:24] + Base[23:16] + Base[15:0].</li>
+                            <li>Límite (20 bits) = Límite[19:16] + Límite[15:0].</li>
+                            <li>Derechos de acceso: se decodifica el byte P·DPL·S·E·ED/C·R/W·A.</li>
+                            <li>Se describe <strong>qué se puede hacer</strong> en ese segmento (leer, escribir, ejecutar, usar como pila).</li>
+                        </ol>
+                    </div>
+                </details>
                 <div class="reversing-container">
                     <div class="input-group">
                         <label>Ingresa el Descriptor Binario (64 bits)</label>
@@ -197,6 +256,10 @@
                         <div id="bin-counter">0 / 64 bits</div>
                     </div>
                     <div id="rev-result" class="reversing-grid hidden"></div>
+                    <details class="howto">
+                        <summary>Glosario de bits (derechos de acceso y bits especiales)</summary>
+                        <div class="howto-body" id="rev-glossary"></div>
+                    </details>
                 </div>
             </section>
         </main>
