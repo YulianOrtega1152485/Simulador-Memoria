@@ -136,54 +136,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const descFlags = document.getElementById('desc-flags-val');
 
     btnProt.addEventListener('click', () => {
+        const descStr = document.getElementById('prot-descriptor').value.trim();
         const selStr = document.getElementById('prot-selector').value.toUpperCase().replace(/^0X/, '');
         const offStr = document.getElementById('prot-offset').value.toUpperCase().replace(/^0X/, '');
-        if (!selStr || !offStr) return alert('Ingresa selector y offset');
+        const segType = document.getElementById('prot-segtype').value;
+        if (!descStr || !selStr || !offStr) return alert('Ingresa descriptor, selector y offset');
+
+        const descClean = descStr.toUpperCase().replace(/^0X/, '');
+        if (!/^[0-9A-F]{16}$/.test(descClean)) {
+            return alert('El descriptor debe tener exactamente 16 dígitos hexadecimales (64 bits).');
+        }
+
         try {
+            const descBin = Conversions.hexToBin(descClean);
+            const parsed = ReversingEngine.parseDescriptor(descBin);
+
+            const base = parsed.base.hex;
+            const limitDec = parsed.limit.decimal;
+            const granular = parsed.details.flags[0] === '1';
+
+            const accessBin = parsed.details.access;
+            const present = accessBin[0] === '1';
+            const dpl = parseInt(accessBin.slice(1, 3), 2);
+            const sBit = accessBin[3] === '1';
+            const typeBits = accessBin.slice(4, 8);
+            const isCode = typeBits[0] === '1';
+            const writable = typeBits[1] === '1';
+            const typeName = !sBit ? 'Sistema' : (isCode ? 'Código' : 'Datos');
+
+            let segError = null;
+            if (!sBit) {
+                segError = `#GP: El descriptor no es de Código/Datos (S=0, es de Sistema); no puede cargarse en ${segType}.`;
+            } else if (segType === 'CS' && !isCode) {
+                segError = '#GP: CS requiere un segmento de Código, pero el descriptor define Datos.';
+            } else if (segType === 'SS' && isCode) {
+                segError = '#GP: SS requiere un segmento de Datos, pero el descriptor define Código.';
+            } else if (segType === 'SS' && !writable) {
+                segError = '#GP: SS requiere un segmento de Datos con bit Writable (W=1).';
+            }
+
             const selVal = parseInt(selStr, 16);
             const ti = (selVal >> 2) & 1;
             const rpl = selVal & 3;
             const index = selVal >> 3;
             const isNull = (selVal & 0xFFF8) === 0;
-            const indexValid = index >= 0 && index < gdtMock.length;
-            const entry = indexValid ? gdtMock.find(e => e.index === index) : null;
-            const base = entry ? entry.base : '0x00000000';
-            const limitDec = entry ? entry.limit : 0x00000;
-            const granular = entry ? entry.granular : false;
-            const present = entry ? entry.present : false;
-            const dpl = entry ? entry.dpl : 0;
-            const access = entry ? entry.access : '00';
-            const type = entry ? entry.type : 'Desconocido';
 
             const res = ProtectedModeEngine.calculatePhysicalAddress(base, offStr, limitDec, {
                 granular,
                 present,
                 isNullSelector: isNull,
-                indexValid
+                indexValid: true
             });
 
-            if (descView) descView.classList.remove('hidden');
-            if (descBase) descBase.innerText = base;
-            if (descLimit) descLimit.innerText = entry ? entry.limitHex : '0x00000';
-            if (descFlags) descFlags.innerText = `G=${granular?1:0}, D/DB=0, AV=0, P=${present?1:0}, DPL=${dpl}`;
+            if (segError) {
+                res.isValid = false;
+                res.error = segError;
+                res.physicalAddressHex = null;
+                res.physicalAddressDec = null;
+                res.formula = null;
+            }
 
-            renderGDT(indexValid ? index : -1);
+            if (descView) descView.classList.remove('hidden');
+            if (descBase) descBase.innerText = res.base;
+            if (descLimit) descLimit.innerText = Conversions.decToHex(limitDec) + (granular ? ' ×4KB' : '');
+            if (descFlags) descFlags.innerText = `P=${present?1:0}, DPL=${dpl}, S=${sBit?1:0}, G=${granular?1:0}`;
+
+            renderGDT(index);
             resultProt.classList.remove('hidden');
             resultProt.className = res.isValid ? 'result-card' : 'result-card error';
 
-            const idxTxt = indexValid ? index : 'N/A';
-            const rangeTxt = res.isValid
-                ? `${res.rangeStartHex} – ${res.rangeEndHex} (Límite efectivo: ${res.limitEffectiveHex})`
-                : `${res.rangeStartHex} – ${res.rangeEndHex} (Límite efectivo: ${res.limitEffectiveHex})`;
-
             resultProt.innerHTML = `
-                <div class="result-item"><span class="result-label">Selector:</span><span class="result-value">${selStr} (Índice=${idxTxt}, TI=${ti}, RPL=${rpl})</span></div>
-                <div class="result-item"><span class="result-label">Descriptor:</span><span class="result-value">${type}</span></div>
+                <div class="result-item"><span class="result-label">Registro:</span><span class="result-value">${segType} (${typeName})</span></div>
+                <div class="result-item"><span class="result-label">Descriptor:</span><span class="result-value">0x${descClean}</span></div>
+                <div class="result-item"><span class="result-label">Selector:</span><span class="result-value">${selStr} (Índice=${index}, TI=${ti}, RPL=${rpl})</span></div>
                 <div class="result-item"><span class="result-label">Base:</span><span class="result-value">${res.base}</span></div>
-                <div class="result-item"><span class="result-label">Límite (raw):</span><span class="result-value">${entry ? entry.limitHex : '0x00000'}</span></div>
+                <div class="result-item"><span class="result-label">Límite (raw):</span><span class="result-value">${Conversions.decToHex(limitDec)}</span></div>
                 <div class="result-item"><span class="result-label">Límite efectivo:</span><span class="result-value">${res.limitEffectiveHex} (G=${granular?1:0})</span></div>
-                <div class="result-item"><span class="result-label">Rango segmento:</span><span class="result-value">${rangeTxt}</span></div>
-                <div class="result-item"><span class="result-label">Derechos (Access):</span><span class="result-value">${access} (P=${present?1:0}, DPL=${dpl})</span></div>
+                <div class="result-item"><span class="result-label">Rango segmento:</span><span class="result-value">${res.rangeStartHex} – ${res.rangeEndHex}</span></div>
+                <div class="result-item"><span class="result-label">Derechos (Access):</span><span class="result-value">${accessBin} (P=${present?1:0}, DPL=${dpl}, S=${sBit?1:0})</span></div>
                 <div class="result-item"><span class="result-label">Offset:</span><span class="result-value">${res.offset}</span></div>
                 <div class="result-item" style="border-top: 2px solid ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}"><span class="result-label">Dirección Lineal:</span><span class="result-value" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.physicalAddressHex : 'ERROR'}</span></div>
                 <div class="formula-box" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.formula : res.error}</div>

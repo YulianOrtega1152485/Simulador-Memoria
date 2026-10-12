@@ -116,14 +116,26 @@
             <section id="screen-protected" class="screen">
                 <div class="module-header">
                     <h2>Modo Protegido (Protected Mode)</h2>
-                    <p>Dirección Física = Base (desde GDT) + Offset</p>
+                    <p>Dirección Lineal = Base (del descriptor) + Offset</p>
                 </div>
                 <div class="prot-dashboard">
                     <div class="prot-top-row">
                         <div class="input-group">
+                            <div class="field field-wide">
+                                <label>Descriptor (Hex, 64 bits)</label>
+                                <input type="text" id="prot-descriptor" placeholder="Ej: 00CF9A000000FFFF" maxlength="18" pattern="[0-9a-fA-FxX]+">
+                            </div>
                             <div class="field">
                                 <label>Selector (Hex)</label>
                                 <input type="text" id="prot-selector" placeholder="Ej: 08" maxlength="4" pattern="[0-9a-fA-F]+">
+                            </div>
+                            <div class="field">
+                                <label>Tipo de Segmento</label>
+                                <select id="prot-segtype">
+                                    <option value="DS">DS · Datos</option>
+                                    <option value="CS">CS · Código</option>
+                                    <option value="SS">SS · Pila</option>
+                                </select>
                             </div>
                             <div class="field">
                                 <label>Offset (Hex)</label>
@@ -133,7 +145,7 @@
                         </div>
 
                         <div id="prot-descriptor-view" class="descriptor-view hidden">
-                            <div class="view-label">Descriptor Encontrado:</div>
+                            <div class="view-label">Descriptor Analizado:</div>
                             <div class="descriptor-grid">
                                 <div class="desc-block base">
                                     <span class="block-label">Base</span>

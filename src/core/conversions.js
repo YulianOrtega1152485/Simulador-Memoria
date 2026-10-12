@@ -24,6 +24,17 @@ export const Conversions = {
     },
 
     /**
+     * Convierte un valor hexadecimal a binario, mapeando cada dígito a 4 bits.
+     * Seguro para descriptores de 64 bits (evita la pérdida de precisión de Number).
+     * @param {string} hex
+     * @returns {string}
+     */
+    hexToBin: (hex) => {
+        const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+        return cleanHex.split('').map(d => parseInt(d, 16).toString(2).padStart(4, '0')).join('');
+    },
+
+    /**
      * Convierte un string binario a decimal.
      * @param {string} bin
      * @returns {number}

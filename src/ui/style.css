@@ -474,6 +474,7 @@ h1, h2, h3, .logo, .bin-input {
     gap: 1rem;
     align-items: flex-end;
     justify-content: center;
+    flex-wrap: wrap;
     height: 100%;
 }
 
@@ -499,6 +500,28 @@ h1, h2, h3, .logo, .bin-input {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     transition: var(--transition);
+}
+
+.field select {
+    background: var(--bg-color);
+    border: 1px solid var(--surface-light);
+    color: var(--text-main);
+    padding: 0.6rem;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.field select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.field-wide input {
+    min-width: 220px;
 }
 
 .btn-primary {
