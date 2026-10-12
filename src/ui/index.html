@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Memoria 80386</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <nav class="navbar">
+            <div class="logo">MEMORY<span>SIM</span></div>
+            <div class="nav-links">
+                <button id="btn-nav-home" class="nav-btn">Inicio</button>
+                <button id="btn-nav-real" class="nav-btn">Modo Real</button>
+                <button id="btn-nav-protected" class="nav-btn">Modo Protegido</button>
+                <button id="btn-nav-reversing" class="nav-btn">Reversing</button>
+            </div>
+        </nav>
+
+        <main id="screen-container">
+            <section id="screen-home" class="screen">
+                <div class="hero">
+                    <h1>Simulador de Direccionamiento <br><span class="highlight">Intel 80386</span></h1>
+                    <p>Explora la arquitectura de memoria desde la simplicidad del Modo Real hasta la complejidad del Modo Protegido.</p>
+                </div>
+                <div class="home-grid">
+                    <div class="home-card" id="card-real">
+                        <div class="card-icon">⚡</div>
+                        <h3>Modo Real</h3>
+                        <p>Cálculo simple de Segmento y Offset (1MB).</p>
+                        <span class="btn-go">Explorar &rarr;</span>
+                    </div>
+                    <div class="home-card" id="card-protected">
+                        <div class="card-icon">🛡️</div>
+                        <h3>Modo Protegido</h3>
+                        <p>GDT, Selectores y protección de memoria.</p>
+                        <span class="btn-go">Explorar &rarr;</span>
+                    </div>
+                    <div class="home-card" id="card-reversing">
+                        <div class="card-icon">🔍</div>
+                        <h3>Reversing</h3>
+                        <p>Análisis binario de descriptores de 64 bits.</p>
+                        <span class="btn-go">Explorar &rarr;</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-real" class="screen">
+                <div class="module-header">
+                    <h2>Modo Real (Real Mode)</h2>
+                    <p>Dirección Física = (Segmento x 16) + Offset</p>
+                </div>
+                <div class="real-dashboard">
+                    <div class="real-top-row">
+                        <div class="input-group">
+                            <div class="field">
+                                <label>Segmento (Hex)</label>
+                                 <input type="text" id="real-segment" placeholder="Ej: 1234" maxlength="4" pattern="[0-9a-fA-F]+">
+                             </div>
+                             <div class="field">
+                                 <label>Offset (Hex)</label>
+                                 <input type="text" id="real-offset" placeholder="Ej: 0005" maxlength="4" pattern="[0-9a-fA-F]+">
+                            </div>
+                            <button id="btn-calc-real" class="btn-primary">Calcular</button>
+                        </div>
+                        <div id="real-animation-stage" class="animation-stage hidden">
+                            <div class="anim-row">
+                                <div id="anim-seg" class="anim-value">0000</div>
+                                <div class="anim-operator">× 16</div>
+                                <div id="anim-seg-shifted" class="anim-value shifted">00000</div>
+                            </div>
+                            <div class="anim-divider"></div>
+                            <div class="anim-row">
+                                <div class="anim-label">Suma de Offset:</div>
+                                <div id="anim-off" class="anim-value">0000</div>
+                            </div>
+                            <div class="anim-final-result">
+                                <div class="final-label">Física Final:</div>
+                                <div id="anim-final" class="anim-value final">00000</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="real-bottom-row">
+                        <div id="real-memory-map" class="memory-map-container hidden">
+                            <div class="map-header">
+                                <span class="map-label">0x00000</span>
+                                <span class="map-label">1 MB (0xFFFFF)</span>
+                            </div>
+                            <div class="map-bar">
+                                <div id="map-segment-window" class="map-window"></div>
+                                <div id="map-offset-pointer" class="map-pointer"></div>
+                            </div>
+                            <div class="map-footer">
+                                <div class="map-info-item">
+                                    <span class="info-tag">Ventana:</span>
+                                    <span id="map-seg-info" class="info-val">0x00000</span>
+                                </div>
+                                <div class="map-info-item">
+                                    <span class="info-tag">Puntero:</span>
+                                    <span id="map-off-info" class="info-val">0x00000</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="real-result" class="result-card hidden">
+                            <!-- Se llena dinámicamente con JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-protected" class="screen">
+                <div class="module-header">
+                    <h2>Modo Protegido (Protected Mode)</h2>
+                    <p>Dirección Física = Base (desde GDT) + Offset</p>
+                </div>
+                <div class="prot-dashboard">
+                    <div class="prot-top-row">
+                        <div class="input-group">
+                            <div class="field">
+                                <label>Selector (Hex)</label>
+                                <input type="text" id="prot-selector" placeholder="Ej: 08" maxlength="4" pattern="[0-9a-fA-F]+">
+                            </div>
+                            <div class="field">
+                                <label>Offset (Hex)</label>
+                                <input type="text" id="prot-offset" placeholder="Ej: 00000005" maxlength="8" pattern="[0-9a-fA-F]+">
+                            </div>
+                            <button id="btn-calc-prot" class="btn-primary">Calcular Dirección</button>
+                        </div>
+
+                        <div id="prot-descriptor-view" class="descriptor-view hidden">
+                            <div class="view-label">Descriptor Encontrado:</div>
+                            <div class="descriptor-grid">
+                                <div class="desc-block base">
+                                    <span class="block-label">Base</span>
+                                    <span id="desc-base-val" class="block-val">0x00000000</span>
+                                </div>
+                                <div class="desc-block limit">
+                                    <span class="block-label">Límite</span>
+                                    <span id="desc-limit-val" class="block-val">0x00000000</span>
+                                </div>
+                                <div class="desc-block flags">
+                                    <span class="block-label">Flags</span>
+                                    <span id="desc-flags-val" class="block-val">P=1, DPL=0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prot-bottom-row">
+                        <div class="gdt-container">
+                            <div class="gdt-header">Global Descriptor Table (GDT)</div>
+                            <div class="gdt-table">
+                                <div class="gdt-row-head">
+                                    <span>Índice</span>
+                                    <span>Selector</span>
+                                    <span>Base</span>
+                                    <span>Límite</span>
+                                </div>
+                                <div id="gdt-rows">
+                                    <!-- Filas generadas por JS -->
+                                </div>
+                            </div>
+                        </div>
+                        <div id="prot-result" class="result-card hidden">
+                            <!-- Resultado dinámico -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="screen-reversing" class="screen">
+                <div class="module-header">
+                    <h2>Laboratorio de Reversing</h2>
+                    <p>Análisis de Descriptor de Segmento (64 bits)</p>
+                </div>
+                <div class="reversing-container">
+                    <div class="input-group">
+                        <label>Ingresa el Descriptor Binario (64 bits)</label>
+                         <input type="text" id="rev-binary" placeholder="010101..." maxlength="64" class="bin-input" pattern="[01]+">
+                        <div id="bin-counter">0 / 64 bits</div>
+                    </div>
+                    <div id="rev-result" class="reversing-grid hidden"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
