@@ -106,6 +106,8 @@ export const ReversingEngine = {
                 isCode,
                 isData,
                 isSystem,
+                edc,
+                rw,
                 capacidades,
                 resumen,
                 edcText,

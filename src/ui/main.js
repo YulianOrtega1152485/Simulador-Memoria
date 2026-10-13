@@ -167,12 +167,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // MODO PROTEGIDO - GDT Mock
     const gdtMock = [
-        { index: 0, selector: '00', base: '0x00000000', limit: 0x00000, limitHex: '0x00000', granular: false, present: false, dpl: 0, access: '00000000', type: 'Descriptor Nulo' },
+        { index: 0, selector: '00', base: '0x00000000', limit: 0x00000, limitHex: '0x00000', granular: false, present: false, dpl: 0, access: '00', type: 'Descriptor Nulo' },
         { index: 1, selector: '08', base: '0x00000000', limit: 0xFFFFF, limitHex: '0xFFFFF', granular: true, present: true, dpl: 0, access: '9A', type: 'Código (DPL 0)' },
         { index: 2, selector: '10', base: '0x00000000', limit: 0xFFFFF, limitHex: '0xFFFFF', granular: true, present: true, dpl: 0, access: '92', type: 'Datos (DPL 0)' },
         { index: 3, selector: '18', base: '0x00400000', limit: 0x0FFFF, limitHex: '0x0FFFF', granular: false, present: true, dpl: 3, access: 'F2', type: 'Datos (DPL 3)' },
         { index: 4, selector: '20', base: '0x00001000', limit: 0x00FFF, limitHex: '0x00FFF', granular: true, present: true, dpl: 0, access: '89', type: 'Tarea/LDT (DPL 0)' },
     ];
+
+    // Operaciones permitidas según el registro de segmento
+    const OPERATIONS_BY_TYPE = {
+        DS: [
+            { value: 'Leer', label: 'Leer' },
+            { value: 'Escribir', label: 'Escribir' }
+        ],
+        CS: [{ value: 'Ejecutar', label: 'Ejecutar' }],
+        SS: [{ value: 'Usar como pila', label: 'Usar como pila' }]
+    };
+    const opSelect = document.getElementById('prot-operation');
+    const cplSelect = document.getElementById('prot-cpl');
+    const segTypeSelect = document.getElementById('prot-segtype');
+
+    const populateOperations = (segType) => {
+        if (!opSelect) return;
+        const ops = OPERATIONS_BY_TYPE[segType] || [];
+        opSelect.innerHTML = ops.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+    };
+    populateOperations(segTypeSelect ? segTypeSelect.value : 'DS');
+    segTypeSelect?.addEventListener('change', (e) => populateOperations(e.target.value));
 
     const renderGDT = (activeIndex = -1) => {
         const container = document.getElementById('gdt-rows');
@@ -186,6 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span>${entry.selector}</span>
                 <span>${entry.base}</span>
                 <span>${entry.limitHex}</span>
+                <span>${entry.access}</span>
+                <span>${entry.present ? 'P1' : 'P0'} · DPL${entry.dpl} · G${entry.granular ? 1 : 0}</span>
             `;
             container.appendChild(row);
         });
@@ -222,67 +245,79 @@ document.addEventListener('DOMContentLoaded', () => {
             const base = parsed.base.hex;
             const limitDec = parsed.limit.decimal;
             const accessBin = parsed.details.access;
+            const accessHex = parseInt(accessBin, 2).toString(16).toUpperCase().padStart(2, '0');
             const granular = dec.g.value;
             const present = dec.p.value;
             const dpl = dec.dpl.value;
             const sBit = dec.s.value;
             const isCode = dec.isCode;
-            const writable = dec.rw;
+            const isData = dec.isData;
+            const rw = dec.rw;
             const typeName = dec.kind;
-
-            let segError = null;
-            if (!sBit) {
-                segError = `#GP: El descriptor no es de Código/Datos (S=0, es de Sistema); no puede cargarse en ${segType}.`;
-            } else if (segType === 'CS' && !isCode) {
-                segError = '#GP: CS requiere un segmento de Código, pero el descriptor define Datos.';
-            } else if (segType === 'SS' && isCode) {
-                segError = '#GP: SS requiere un segmento de Datos, pero el descriptor define Código.';
-            } else if (segType === 'SS' && !writable) {
-                segError = '#GP: SS requiere un segmento de Datos con bit Writable (W=1).';
-            }
+            const operation = opSelect ? opSelect.value : null;
+            const cpl = cplSelect ? parseInt(cplSelect.value, 10) : 0;
 
             const selVal = parseInt(selStr, 16);
             const ti = (selVal >> 2) & 1;
             const rpl = selVal & 3;
             const index = selVal >> 3;
             const isNull = (selVal & 0xFFF8) === 0;
+            const indexValid = index < gdtMock.length;
+
+            // El descriptor ingresado es la única fuente: se escribe en la fila de la GDT del índice del selector.
+            if (indexValid && !isNull) {
+                gdtMock[index] = {
+                    index,
+                    selector: (index << 3).toString(16).toUpperCase().padStart(2, '0'),
+                    base,
+                    limit: limitDec,
+                    limitHex: parsed.limit.hex,
+                    granular,
+                    present,
+                    dpl,
+                    access: accessHex,
+                    type: typeName
+                };
+            }
 
             const res = ProtectedModeEngine.calculatePhysicalAddress(base, offStr, limitDec, {
                 granular,
                 present,
                 isNullSelector: isNull,
-                indexValid: true
+                indexValid,
+                cpl,
+                rpl,
+                dpl,
+                operation,
+                isCode,
+                isData,
+                rw
             });
-
-            if (segError) {
-                res.isValid = false;
-                res.error = segError;
-                res.physicalAddressHex = null;
-                res.physicalAddressDec = null;
-                res.formula = null;
-            }
 
             if (descView) descView.classList.remove('hidden');
             if (descBase) descBase.innerText = res.base;
-            if (descLimit) descLimit.innerText = Conversions.decToHex(limitDec) + (granular ? ' ×4KB' : '');
+            if (descLimit) descLimit.innerText = parsed.limit.hex + (granular ? ' ×4KB' : '');
             if (descFlags) descFlags.innerText = `P=${present?1:0}, DPL=${dpl}, S=${sBit?1:0}, G=${granular?1:0}`;
 
-            renderGDT(index);
+            renderGDT(indexValid ? index : -1);
             resultProt.classList.remove('hidden');
             resultProt.className = res.isValid ? 'result-card' : 'result-card error';
 
             const capsHtml = dec.capacidades.map(c => `<span class="cap-badge">${c}</span>`).join('');
+            const privilege = Math.max(cpl, rpl);
 
             resultProt.innerHTML = `
                 <div class="result-item"><span class="result-label">Registro:</span><span class="result-value">${segType} (${typeName})</span></div>
                 <div class="result-item"><span class="result-label">Descriptor (bytes LE):</span><span class="result-value">${descClean}</span></div>
                 <div class="result-item"><span class="result-label">Descriptor (valor):</span><span class="result-value">0x${descValue}</span></div>
                 <div class="result-item"><span class="result-label">Selector:</span><span class="result-value">${selStr} (Índice=${index}, TI=${ti}, RPL=${rpl})</span></div>
+                <div class="result-item"><span class="result-label">Operación:</span><span class="result-value">${operation || '—'}</span></div>
                 <div class="result-item"><span class="result-label">Base:</span><span class="result-value">${res.base}</span></div>
-                <div class="result-item"><span class="result-label">Límite (raw):</span><span class="result-value">${Conversions.decToHex(limitDec)}</span></div>
+                <div class="result-item"><span class="result-label">Límite (raw):</span><span class="result-value">${parsed.limit.hex}</span></div>
                 <div class="result-item"><span class="result-label">Límite efectivo:</span><span class="result-value">${res.limitEffectiveHex} (G=${granular?1:0})</span></div>
                 <div class="result-item"><span class="result-label">Rango segmento:</span><span class="result-value">${res.rangeStartHex} – ${res.rangeEndHex}</span></div>
                 <div class="result-item"><span class="result-label">Derechos (Access):</span><span class="result-value">${accessBin} (P=${present?1:0}, DPL=${dpl}, S=${sBit?1:0})</span></div>
+                <div class="result-item"><span class="result-label">Privilegio:</span><span class="result-value">max(CPL=${cpl}, RPL=${rpl}) = ${privilege} vs DPL=${dpl}</span></div>
                 <div class="result-item"><span class="result-label">Offset:</span><span class="result-value">${res.offset}</span></div>
                 <div class="result-item" style="border-top: 2px solid ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}"><span class="result-label">Dirección Lineal:</span><span class="result-value" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.physicalAddressHex : 'ERROR'}</span></div>
                 <div class="formula-box" style="color: ${res.isValid ? 'var(--accent-color)' : 'var(--error-color)'}">${res.isValid ? res.formula : res.error}</div>
