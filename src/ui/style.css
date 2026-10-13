@@ -839,6 +839,11 @@ h1, h2, h3, .logo, .bin-input {
     overflow: hidden;
 }
 
+/* Separación extra entre el resultado/GDT y el glosario (modo protegido) */
+#screen-protected .howto-glossary {
+    margin-top: 2.5rem;
+}
+
 .howto > summary {
     cursor: pointer;
     padding: 1rem 1.5rem;
@@ -937,8 +942,9 @@ h1, h2, h3, .logo, .bin-input {
 /* Glosario */
 .glossary-cols {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
+    align-items: start;
 }
 
 .glossary-col h5 {
@@ -986,4 +992,11 @@ h1, h2, h3, .logo, .bin-input {
 
 .bit-legend li {
     line-height: 1.5;
+}
+
+/* Pantallas estrechas: glosario de una sola columna */
+@media (max-width: 720px) {
+    .glossary-cols {
+        grid-template-columns: 1fr;
+    }
 }
