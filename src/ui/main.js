@@ -165,6 +165,33 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { alert('Error: ' + e.message); }
     });
 
+    // MODO REAL - Limpiar / ocultar resultado al editar
+    const clearReal = document.getElementById('btn-clear-real');
+    const resetRealAnimation = () => {
+        const aSeg = document.getElementById('anim-seg');
+        const aSegS = document.getElementById('anim-seg-shifted');
+        const aOff = document.getElementById('anim-off');
+        const aFin = document.getElementById('anim-final');
+        aSeg.innerText = '0000';
+        aSegS.innerText = '00000';
+        aOff.innerText = '0000';
+        aFin.innerText = '00000';
+        [aSeg, aSegS, aOff, aFin].forEach(el => el.classList.remove('highlight'));
+    };
+    const hideRealResult = () => {
+        resultReal.classList.add('hidden');
+        mapContainer.classList.add('hidden');
+        resetRealAnimation();
+    };
+    ['real-segment', 'real-offset'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', hideRealResult);
+    });
+    clearReal?.addEventListener('click', () => {
+        document.getElementById('real-segment').value = '';
+        document.getElementById('real-offset').value = '';
+        hideRealResult();
+    });
+
     // MODO PROTEGIDO - GDT Mock
     const gdtMock = [
         { index: 0, selector: '00', base: '0x00000000', limit: 0x00000, limitHex: '0x00000', granular: false, present: false, dpl: 0, access: '00', type: 'Descriptor Nulo' },
@@ -327,6 +354,33 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { alert('Error: ' + e.message); }
     });
 
+    // MODO PROTEGIDO - Limpiar / ocultar resultado al editar
+    const clearProt = document.getElementById('btn-clear-prot');
+    const resetProtDescriptorView = () => {
+        if (descBase) descBase.innerText = '0x00000000';
+        if (descLimit) descLimit.innerText = '0x00000000';
+        if (descFlags) descFlags.innerText = 'P=1, DPL=0';
+    };
+    const hideProtResult = () => {
+        resultProt.classList.add('hidden');
+        resetProtDescriptorView();
+        renderGDT(-1);
+    };
+    ['prot-descriptor', 'prot-selector', 'prot-offset', 'prot-segtype', 'prot-operation', 'prot-cpl'].forEach(id => {
+        const el = document.getElementById(id);
+        el?.addEventListener('input', hideProtResult);
+        el?.addEventListener('change', hideProtResult);
+    });
+    clearProt?.addEventListener('click', () => {
+        document.getElementById('prot-descriptor').value = '';
+        document.getElementById('prot-selector').value = '';
+        document.getElementById('prot-offset').value = '';
+        if (segTypeSelect) segTypeSelect.value = 'DS';
+        populateOperations('DS');
+        if (cplSelect) cplSelect.value = '0';
+        hideProtResult();
+    });
+
     // REVERSING
     const binInput = document.getElementById('rev-binary');
     const binCounter = document.getElementById('bin-counter');
@@ -421,5 +475,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             } catch (err) { resultRev.classList.add('hidden'); }
         } else { resultRev.classList.add('hidden'); }
+    });
+
+    // REVERSING - Limpiar
+    document.getElementById('btn-clear-rev')?.addEventListener('click', () => {
+        binInput.value = '';
+        binCounter.innerText = '0 / 64 bits';
+        resultRev.classList.add('hidden');
+        resultRev.innerHTML = '';
     });
 });

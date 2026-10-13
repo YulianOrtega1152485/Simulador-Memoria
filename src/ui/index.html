@@ -12,7 +12,7 @@
 <body>
     <div id="app">
         <nav class="navbar">
-            <div class="logo">MEMORY<span>SIM</span></div>
+            <div class="logo">Simulador de <span>Memoria</span></div>
             <div class="nav-links">
                 <button id="btn-nav-home" class="nav-btn">Inicio</button>
                 <button id="btn-nav-real" class="nav-btn">Modo Real</button>
@@ -78,8 +78,9 @@
                                  <input type="text" id="real-offset" placeholder="Ej: 0005" maxlength="4" pattern="[0-9a-fA-F]+">
                             </div>
                             <button id="btn-calc-real" class="btn-primary">Calcular</button>
+                            <button id="btn-clear-real" class="btn-secondary" type="button">Limpiar</button>
                         </div>
-                        <div id="real-animation-stage" class="animation-stage hidden">
+                        <div id="real-animation-stage" class="animation-stage">
                             <div class="anim-row">
                                 <div id="anim-seg" class="anim-value">0000</div>
                                 <div class="anim-operator">× 16</div>
@@ -165,11 +166,11 @@
                     </div>
                 </details>
                 <div class="prot-dashboard">
-                    <div class="prot-top-row">
+                    <div class="prot-col">
                         <div class="input-group">
                             <div class="field field-wide">
                                 <label>Descriptor (Hex, 64 bits, bytes LE)</label>
-                                <input type="text" id="prot-descriptor" placeholder="Ej: 0300000040F2C000" maxlength="18" pattern="[0-9a-fA-FxX]+">
+                                <input type="text" id="prot-descriptor" placeholder="Ej: 0300000040F2C000" maxlength="16" pattern="[0-9a-fA-FxX]+">
                             </div>
                             <div class="field">
                                 <label>Selector (Hex)</label>
@@ -201,28 +202,9 @@
                                 <input type="text" id="prot-offset" placeholder="Ej: 00000005" maxlength="8" pattern="[0-9a-fA-F]+">
                             </div>
                             <button id="btn-calc-prot" class="btn-primary">Calcular Dirección</button>
+                            <button id="btn-clear-prot" class="btn-secondary" type="button">Limpiar</button>
                         </div>
 
-                        <div id="prot-descriptor-view" class="descriptor-view hidden">
-                            <div class="view-label">Descriptor Analizado:</div>
-                            <div class="descriptor-grid">
-                                <div class="desc-block base">
-                                    <span class="block-label">Base</span>
-                                    <span id="desc-base-val" class="block-val">0x00000000</span>
-                                </div>
-                                <div class="desc-block limit">
-                                    <span class="block-label">Límite</span>
-                                    <span id="desc-limit-val" class="block-val">0x00000000</span>
-                                </div>
-                                <div class="desc-block flags">
-                                    <span class="block-label">Flags</span>
-                                    <span id="desc-flags-val" class="block-val">P=1, DPL=0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="prot-bottom-row">
                         <div class="gdt-container">
                             <div class="gdt-header">Global Descriptor Table (GDT)</div>
                             <div class="gdt-table">
@@ -239,15 +221,37 @@
                                 </div>
                             </div>
                         </div>
+
+                        <details class="howto howto-glossary">
+                            <summary>Glosario de bits (derechos de acceso y bits especiales)</summary>
+                            <div class="howto-body" id="prot-glossary"></div>
+                        </details>
+                    </div>
+
+                    <div class="prot-col">
+                        <div id="prot-descriptor-view" class="descriptor-view">
+                            <div class="view-label">Descriptor Analizado:</div>
+                            <div class="descriptor-grid">
+                                <div class="desc-block base">
+                                    <span class="block-label">Base</span>
+                                    <span id="desc-base-val" class="block-val">0x00000000</span>
+                                </div>
+                                <div class="desc-block limit">
+                                    <span class="block-label">Límite</span>
+                                    <span id="desc-limit-val" class="block-val">0x00000000</span>
+                                </div>
+                                <div class="desc-block flags">
+                                    <span class="block-label">Flags</span>
+                                    <span id="desc-flags-val" class="block-val">P=1, DPL=0</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="prot-result" class="result-card hidden">
                             <!-- Resultado dinámico -->
                         </div>
                     </div>
                 </div>
-                <details class="howto howto-glossary">
-                    <summary>Glosario de bits (derechos de acceso y bits especiales)</summary>
-                    <div class="howto-body" id="prot-glossary"></div>
-                </details>
             </section>
 
             <section id="screen-reversing" class="screen">
@@ -272,6 +276,7 @@
                         <label>Ingresa el Descriptor Binario (64 bits)</label>
                          <input type="text" id="rev-binary" placeholder="010101..." maxlength="64" class="bin-input" pattern="[01]+">
                         <div id="bin-counter">0 / 64 bits</div>
+                        <button id="btn-clear-rev" class="btn-secondary" type="button">Limpiar</button>
                     </div>
                     <div id="rev-result" class="reversing-grid hidden"></div>
                     <details class="howto">
