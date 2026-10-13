@@ -212,7 +212,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const descBin = Conversions.hexToBin(descClean);
+            // El descriptor se ingresa en orden de bytes de memoria (little-endian: byte 0 primero).
+            // Se invierte el orden de bytes para obtener el valor canónico del descriptor.
+            const descValue = descClean.match(/../g).reverse().join('');
+            const descBin = Conversions.hexToBin(descValue);
             const parsed = ReversingEngine.parseDescriptor(descBin);
 
             const dec = parsed.decoded;
@@ -272,7 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             resultProt.innerHTML = `
                 <div class="result-item"><span class="result-label">Registro:</span><span class="result-value">${segType} (${typeName})</span></div>
-                <div class="result-item"><span class="result-label">Descriptor:</span><span class="result-value">0x${descClean}</span></div>
+                <div class="result-item"><span class="result-label">Descriptor (bytes LE):</span><span class="result-value">${descClean}</span></div>
+                <div class="result-item"><span class="result-label">Descriptor (valor):</span><span class="result-value">0x${descValue}</span></div>
                 <div class="result-item"><span class="result-label">Selector:</span><span class="result-value">${selStr} (Índice=${index}, TI=${ti}, RPL=${rpl})</span></div>
                 <div class="result-item"><span class="result-label">Base:</span><span class="result-value">${res.base}</span></div>
                 <div class="result-item"><span class="result-label">Límite (raw):</span><span class="result-value">${Conversions.decToHex(limitDec)}</span></div>

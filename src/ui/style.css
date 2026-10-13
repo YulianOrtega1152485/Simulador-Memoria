@@ -897,6 +897,13 @@ h1, h2, h3, .logo, .bin-input {
     font-size: 0.85rem;
 }
 
+.howto-note {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
 .bit-map {
     margin-top: 1rem;
 }
