@@ -15,5 +15,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: src/ui
+          path: src
       - uses: actions/deploy-pages@v4
